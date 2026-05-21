@@ -56,7 +56,7 @@ Place the script in the following Unity project path:
 Assets/Editor/CesiumCityGenAligner.cs
 ```
 
-The script must be placed inside an `Editor` folder because it uses Unity Editor APIs.
+The script should be placed inside an Editor folder because it uses UnityEditor-only APIs such as EditorWindow, MenuItem, EditorGUILayout, Undo, and EditorUtility.
 
 ---
 
