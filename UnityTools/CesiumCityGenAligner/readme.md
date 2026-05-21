@@ -4,8 +4,6 @@ Unity Editor tool for vertically aligning CityGen3D Landscape tiles with Cesium 
 
 This tool was developed for the Sustainable Personalized Driving project to support the integration of CityGen3D road networks with Cesium-rendered Google Photorealistic 3D Tiles.
 
-CityGen3D itself is not included in this repository because it is a paid Unity Asset Store plugin.
-
 ---
 
 ## Purpose
