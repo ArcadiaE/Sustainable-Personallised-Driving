@@ -1,17 +1,6 @@
 // =============================================================================
 //  OptimizerBridge.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  The seam between the study loop (RoundController) and the optimizer. Keeping it
-//  abstract lets the same RoundController run against either the runnable stand-in
-//  (MockOptimizerBridge) or the real "Bayesian Optimization for Unity" asset
-//  (BoForUnityBridge), without changing any other code.
-//
-//  Design space (7 continuous parameters, in this fixed order everywhere):
-//    0 visible · 1 size · 2 salience · 3 style · 4 rate · 5 valence · 6 peer
-//  Objectives (3, multi-objective EHVI):
-//    0 energy kWh/100km (MINIMIZE) · 1 task load NASA-TLX (MINIMIZE) · 2 acceptance van der Laan (MAXIMIZE)
-//
 // =============================================================================
 
 using System;
