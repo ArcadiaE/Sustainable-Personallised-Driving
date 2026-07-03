@@ -12,6 +12,11 @@ city (terrain, `MapRoads`, buildings) already in it.
 
 Packages needed: Cesium for Unity, Unity Splines (used by the road cut), TextMeshPro, Input System.
 
+Unity version: developed on **Unity 6000.3.9f1** (Unity 6.3). Any later 6.3 patch
+release (e.g. 6000.3.11f1) opens the project directly — Unity only shows a version
+upgrade confirmation and rebuilds the `Library` cache on first open. Avoid going
+back to an older editor after saving with a newer one.
+
 ---
 
 ## Editor tools
