@@ -5,7 +5,6 @@
 //  rendered by Cesium for Unity (Google Photorealistic 3D Tiles or any
 //  other tileset).
 //
-//  PLACE IN:   Assets/Editor/CesiumCityGenAligner.cs
 //  OPEN VIA:   Tools  >  CityGen3D x Cesium  >  Ground Aligner
 //
 //  WHY THIS EXISTS
