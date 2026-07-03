@@ -2,18 +2,6 @@
 //  RoadOnlyCut_v2.cs   (class RoadOnlyCutV2)
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
 //
-//  Fix over RoadOnlyCut: MapRoads in this scene has 4275 children, but ~3004 of them
-//  are "(Footpath)" (pavements / pedestrian paths / park paths), not drivable road.
-//  v1 collected ALL of them, so it cut footpaths across pavements/plazas/parks - i.e.
-//  it cut "non-road flat ground". v2 EXCLUDES footpaths (by name token) and cuts only
-//  the drivable carriageways: (Main Road) / (Minor Road) / (Dual Carriageway) /
-//  (Turning Circle). Everything else identical: cut the carriageway corridor only,
-//  invertSelection=false, leave buildings untouched, keep the existing Clipping overlay
-//  and DualClip material.
-//
-//  Pair with the DualClip height gate ("横着切"): with the gate ACTIVE, only the LOW
-//  part of the carriageway is cut, so overhangs/facades leaning over the road are kept.
-//
 //  OPEN VIA: Tools > CityGen3D x Cesium > Road Only Cut v2
 // =============================================================================
 
