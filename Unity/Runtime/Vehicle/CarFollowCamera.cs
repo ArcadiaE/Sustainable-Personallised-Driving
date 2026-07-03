@@ -1,5 +1,4 @@
-// 第三人称跟车相机：阻尼跟随 + 异常坐标保护；同时把车辆相机注册到
-// CesiumCameraManager，让 Cesium 瓦片按跟车视角加载，禁用时解除注册。
+// 第三人称跟车相机
 using CesiumForUnity;
 using UnityEngine;
 
@@ -63,7 +62,6 @@ public class CarFollowCamera : MonoBehaviour
 
         Vector3 tp = target.position;
 
-        // 防线1：目标坐标含 NaN/Infinity → 本帧不动
         if (float.IsNaN(tp.x) || float.IsNaN(tp.y) || float.IsNaN(tp.z) ||
             float.IsInfinity(tp.x) || float.IsInfinity(tp.y) || float.IsInfinity(tp.z))
         {
@@ -71,7 +69,6 @@ public class CarFollowCamera : MonoBehaviour
             return;
         }
 
-        // 防线2：目标飞出合理范围（物理爆炸/无限坠落）→ 本帧不动
         if (Mathf.Abs(tp.x) > maxValidCoordinate ||
             Mathf.Abs(tp.y) > maxValidCoordinate ||
             Mathf.Abs(tp.z) > maxValidCoordinate)
@@ -87,11 +84,11 @@ public class CarFollowCamera : MonoBehaviour
                                   - flatRotation * Vector3.forward * distance
                                   + Vector3.up * height;
 
-        float dt = Mathf.Min(Time.deltaTime, 0.05f); // 防线3：限制单帧步长
+        float dt = Mathf.Min(Time.deltaTime, 0.05f);
         transform.position = Vector3.Lerp(transform.position, desiredPosition, positionDamping * dt);
 
         Vector3 lookDir = (tp + Vector3.up * lookHeightOffset) - transform.position;
-        if (lookDir.sqrMagnitude < 0.0001f) return; // LookRotation 零向量保护
+        if (lookDir.sqrMagnitude < 0.0001f) return;
 
         Quaternion desiredRotation = Quaternion.LookRotation(lookDir);
         transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, rotationDamping * dt);
