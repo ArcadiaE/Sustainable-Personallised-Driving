@@ -1,13 +1,6 @@
 // =============================================================================
 //  MockOptimizerBridge.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  A runnable stand-in for the optimizer so the WHOLE study loop works end-to-end
-//  before the real Bayesian-Optimization-for-Unity asset is wired in. It draws each
-//  round's 7 parameters at random within their ranges (random search) and logs the
-//  objectives. Use it to test RoundController + HUD + autopilot + questionnaire, then
-//  swap in BoForUnityBridge for the real personalization.
-//
 // =============================================================================
 
 using UnityEngine;
