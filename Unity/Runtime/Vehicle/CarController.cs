@@ -52,8 +52,6 @@ public class CarController : MonoBehaviour
         }
     }
 
-    // 禁用 prefab 自带的 WheelCollider（无人供给 motorTorque 时它们等于抱死的轮胎，
-    // 会抵抗 AddForce 推进并产生翘头力矩），改用一个包住整车的低摩擦 BoxCollider。
     void SetupColliders()
     {
         // 1. 禁用所有 WheelCollider
@@ -75,7 +73,7 @@ public class CarController : MonoBehaviour
         bodyMat.bounceCombine = PhysicsMaterialCombine.Minimum;
         bodyMat.bounciness = 0f;
 
-        // 3. 车身 BoxCollider：尺寸取所有 Renderer 的联合包围盒（含轮胎，底面即轮胎最低点）
+        // 3. 车身 BoxCollider
         BoxCollider body = GetComponent<BoxCollider>();
         if (body == null)
         {
@@ -89,7 +87,7 @@ public class CarController : MonoBehaviour
                 {
                     worldBounds.Encapsulate(renderers[i].bounds);
                 }
-                // 世界包围盒转回本物体局部空间（车未旋转时进行，Start 阶段成立）
+                // 世界包围盒转回本物体局部空间
                 body.center = transform.InverseTransformPoint(worldBounds.center);
                 Vector3 lossy = transform.lossyScale;
                 body.size = new Vector3(
@@ -118,7 +116,7 @@ public class CarController : MonoBehaviour
 
     void FixedUpdate()
     {
-        // —— 1. 计算当前速度（考虑前进/后退）——
+        // —— 1. 计算当前速——
         Vector3 velocity = rb.linearVelocity;
         float forwardSpeed = Vector3.Dot(velocity, transform.forward);   // 正=前进，负=后退
         currentSpeed = velocity.magnitude * 3.6f;
@@ -177,14 +175,12 @@ public class CarController : MonoBehaviour
             rb.MoveRotation(rb.rotation * turnRotation);
         }
 
-        // —— 6. 侧向摩擦（防止车打滑）——
-        // VelocityChange 不乘时间步长，必须自己乘 fixedDeltaTime 并钳制在 [0,1]，
-        // 否则每帧消除量超过侧向速度本身会反向过冲并指数放大（旧版崩溃根因）。
+        // —— 6. 侧向摩擦——
         Vector3 rightVelocity = transform.right * Vector3.Dot(velocity, transform.right);
         float grip = Mathf.Clamp01(sidewaysFriction * Time.fixedDeltaTime);
         rb.AddForce(-rightVelocity * grip, ForceMode.VelocityChange);
 
-        // —— 7. 速度安全钳制（防物理爆炸传播）——
+        // —— 7. 速度安全钳制——
         if (rb.linearVelocity.magnitude > absoluteMaxSpeed)
         {
             rb.linearVelocity = rb.linearVelocity.normalized * absoluteMaxSpeed;
