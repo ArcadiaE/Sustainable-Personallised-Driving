@@ -2,13 +2,6 @@
 //  CesiumRigidAlign.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
 //
-//  Rigid vertical alignment between the Cesium tileset and the CityGen3D world.
-//  Measures the median (Cesium - terrain) height gap on the road corridors and
-//  compensates it through CesiumGeoreference.height. The terrain heightmap is
-//  never touched - that is the whole point of this tool replacing the conform
-//  pipeline. Local residuals (a metre here and there) are accepted and hidden
-//  by the road-corridor clipping, not chased.
-//
 //  Workflow: MEASURE -> APPLY -> wait for tiles to settle -> MEASURE again
 //  (expect |median| well under 0.5 m) -> done. REVERT restores the original height.
 // -----------------------------------------------------------------------------
