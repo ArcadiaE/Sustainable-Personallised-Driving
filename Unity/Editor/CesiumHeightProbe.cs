@@ -2,21 +2,6 @@
 //  CesiumHeightProbe.cs   (class CesiumHeightProbe)
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
 //
-//  FEASIBILITY PROBE for "Direction A": derive building outlines from the Cesium
-//  photogrammetry's own surface heights (so they match the real outline exactly,
-//  shape-adaptive, and generalise to any location - no region constants).
-//
-//  This script ONLY samples and reports. It does NOT cut, build geometry, or change
-//  Cesium / the scene in any way. It samples a coarse grid of surface heights with
-//  Cesium's `SampleHeightMostDetailed` (which loads the most-detailed tiles on demand,
-//  independent of what is currently rendered) and prints the height distribution, so
-//  we can confirm that "tall = building / low = road+ground" actually separates here
-//  before committing to the full approach.
-//
-//  Coordinate chain: Unity XZ -> ECEF (georeference) -> lon/lat (WGS84 ellipsoid)
-//  -> SampleHeightMostDetailed -> sampled surface height (m above ellipsoid).
-//  Async result is polled on EditorApplication.update so the tileset can load.
-//
 //  OPEN VIA: Tools > CityGen3D x Cesium > Cesium Height Probe
 // =============================================================================
 
