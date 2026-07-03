@@ -65,7 +65,7 @@ public class CarController : MonoBehaviour
             Debug.Log("[CarController] Disabled " + wheels.Length + " WheelCollider(s).");
         }
 
-        // 2. 低摩擦物理材质（抓地与减速由脚本的侧向摩擦和发动机制动接管）
+        // 2. 低摩擦物理材质
         PhysicsMaterial bodyMat = new PhysicsMaterial("CarBodyAuto");
         bodyMat.dynamicFriction = bodyFriction;
         bodyMat.staticFriction = bodyFriction;
@@ -147,7 +147,7 @@ public class CarController : MonoBehaviour
             }
         }
 
-        // 发动机制动（没踩油门时自然减速）
+        // 发动机制动
         rb.linearDamping = (throttleInput == 0f) ? groundedDrag : drag;
 
         // —— 3. 手刹 ——
@@ -165,7 +165,7 @@ public class CarController : MonoBehaviour
         // —— 5. 基于行驶方向的真实转向 ——
         if (Mathf.Abs(forwardSpeed) > 0.3f)
         {
-            // turnRate 单位是 弧度/秒，车尾跟手在倒车时自动成立（因 forwardSpeed 变负）
+            // turnRate 单位 弧度/秒
             float turnRateRadPerSec = (forwardSpeed / turnRadiusFactor)
                                     * Mathf.Tan(currentSteerAngle * Mathf.Deg2Rad);
 
