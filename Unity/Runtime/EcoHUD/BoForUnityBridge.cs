@@ -1,22 +1,6 @@
 // =============================================================================
 //  BoForUnityBridge.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  Adapter to the "Bayesian Optimization for Unity" asset (Jansen & Colley; BoTorch,
-//  qEHVI for multi-objective). Fill the TODO bodies with the asset's real API, then
-//  put THIS on the RoundController.optimizer slot instead of MockOptimizerBridge.
-//  Everything else (RoundController, HUD, autopilot, questionnaire) stays unchanged.
-//
-//  The asset talks to a Python/BoTorch server asynchronously, so a new candidate does
-//  not arrive on the same frame you request it. Subscribe to the asset's "sample ready"
-//  callback and call RaiseParametersReady() from there (see StartOptimization TODO).
-//
-//  Wiring checklist:
-//   - declare 7 parameters and 3 objectives in the asset's manager,
-//   - same order as OptimizerBridge (0 visible..6 peer ; 0 energy,1 load,2 acceptance),
-//   - set objective directions: energy MIN, load MIN, acceptance MAX,
-//   - set the iteration budget there too.
-//
 // =============================================================================
 
 using UnityEngine;
