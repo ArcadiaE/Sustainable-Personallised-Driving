@@ -1,19 +1,6 @@
 // =============================================================================
 //  EcoFeedbackHUD.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  Layer 2 of the design space: the PARAMETERIZED eco-driving feedback HUD.
-//  It renders the real-time eco-score (from EcoScore) according to 7 continuous
-//  design parameters that a Round Controller / the Bayesian optimizer sets each
-//  round (OptiCarVis style: everything continuous, booleans via a 0.5 threshold).
-//  The parameters map to the eco-feedback design framework (Information / Timing /
-//  Display): visibility, size, colour salience, numeric-vs-symbolic style, feedback
-//  frequency (intermittent<->continuous), framing valence, and peer comparison.
-//
-//  For a demo it works standalone: drive, and the bar/colour respond live. The BO
-//  loop later calls ApplyDesignParams(...) to set the 7 values per iteration.
-//  UI references are optional (null-guarded), so wire whichever elements exist.
-//
 // =============================================================================
 
 using UnityEngine;
