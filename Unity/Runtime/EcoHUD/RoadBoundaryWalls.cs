@@ -2,17 +2,6 @@
 //  RoadBoundaryWalls.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
 //
-//  Builds INVISIBLE collision walls along the road network so the car physically cannot
-//  leave the carriageway and drive into buildings. The constraint comes from the road
-//  network itself, not from modelling buildings: the cut reveals the CityGen road,
-//  and these walls fence its edges.
-//
-//  Per carriageway mesh (MapRoads, Footpaths excluded) it finds the boundary edges (edges
-//  used by a single triangle = the road outline), keeps the ones running ALONG the road
-//  (the building-facing long sides) and drops the ones running ACROSS it (the ends), and
-//  trims a little off each end so junctions stay open for turns. The kept edges are
-//  extruded up into wall quads, merged into one mesh with a MeshCollider, no renderer.
-//
 //  IMPORTANT: build it in the EDITOR with the context menu "Build Walls". At runtime the
 //  road meshes are static-batched into non-readable "Combined Mesh" objects, so a Start-time
 //  build reads nothing. The editor build reads the original meshes and the result is saved
