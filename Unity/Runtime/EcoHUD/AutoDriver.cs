@@ -1,40 +1,6 @@
 // =============================================================================
-//  AutoDriver.cs  (v2 - route snapped to CityGen road centrelines)
+//  AutoDriver.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  Demo auto-driver: follows the baked road-centreline loop with look-ahead pure pursuit,
-//  feeding the CarController throttle/steer (real physics, so EcoScore still reacts). At
-//  start it snaps the car onto the route start AND faces it along the route, then loops.
-//  Turning is tuned to hug bends. Pair with RoadBoundaryWalls for a hard road boundary.
-//
-//  --- v2.1 fix: no side-junction bulge -----------------------------------------
-//  Matching is now restricted to the loop's through-roads (King's Road, Anderson
-//  Street, Sloane Avenue, Draycott Place, Cadogan Gardens). v2.0 briefly snapped a
-//  few points onto crossing side streets (Elystan/Symons/Culford/Walpole) at each
-//  junction, so the path arced toward the side-street mouth and could trap the car;
-//  dropping side streets makes the route pass straight through those junctions.
-//
-//  --- v2 change (route only; driving logic + tuning unchanged from v1) --------------
-//  Same loop, same streets, same start as v1. The ONLY change is the `route` points:
-//  v1 sat ~2.3 m off the carriageway centre (recorded on one lane) and swayed side to
-//  side across the road. v2 snaps every point onto the true road centreline so the car
-//  runs down the middle of the road with no side-to-side wobble.
-//
-//  How v2 was generated (offline, not at runtime):
-//    1. Read the CityGen3D map database  Assets/Database/Pimlico (0, 0).asset
-//       (origin lat/lon 51.489498, -0.170000; mapNodes = lat/lon, mapWays = node lists).
-//    2. Convert every drivable-road node to Unity XZ with CityGen's own local-metre
-//       projection (GeoCoord.GetMapCoord: metresPerLat/Lon around the point, X=east of
-//       origin, Z=north of origin; MapRoads parent is at world (0,0) so map XZ = world XZ).
-//    3. Map-match v1's points to that centreline network (nearest segment, direction-gated
-//       so junctions don't grab a crossing street; median-filtered to kill 1-2 pt flicker),
-//       resample at 1.5 m, light 5-pt moving average to round staggered-junction doglegs.
-//    Result: path lies on the centreline (median offset 0 m, 95% < 0.8 m) and is smooth
-//    (curvature noise max ~0.24 m vs v1's ~0.15 m). Generator lives in Scripts/EcoHUD/tools.
-//
-//  Roads (same as v1): start on King's Road -> Anderson Street -> Draycott Place / Cadogan
-//  Gardens NE leg -> Sloane Avenue turn -> back down King's Road to the start (real
-//  carriageway centrelines from the CityGen map data). Edit `route` to change the path.
 //
 //  DEPLOY: class name is kept as `AutoDriver` so this file's contents replace
 //  Assets/Scripts/EcoHUD/AutoDriver.cs in place (the car's component + RoundController
