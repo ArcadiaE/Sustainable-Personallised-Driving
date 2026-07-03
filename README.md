@@ -8,6 +8,8 @@ The driving environment is built in Unity from Cesium 3D Tiles (photogrammetry b
 
 ## Repository Layout
 
+> Setup and per-tool usage instructions: **[Unity/README.md](Unity/README.md)**
+
 - `Unity/Runtime/EcoHUD/`
   Runtime scripts for the eco-driving study: eco-feedback HUD and scoring (`EcoFeedbackHUD`, `EcoScore`, `EcoDrivingHUD`), automated route driving (`AutoDriver`), study round management and in-scene questionnaires (`RoundController`, `SimpleStudyQuestionnaire`, `StudyQuestionnaire`), road boundary walls, and bridges to Bayesian-Optimization-for-Unity (`BoForUnityBridge`, `OptimizerBridge`, `MockOptimizerBridge`).
 
@@ -19,9 +21,6 @@ The driving environment is built in Unity from Cesium 3D Tiles (photogrammetry b
 
 - `Unity/Shaders/RoadCutoutDualOverlay/`
   Shader Graph, material, and mask texture for dual clipping of the Cesium tileset along the road corridor. `.meta` files are included so the material keeps its shader reference when imported into a Unity project.
-
-- `UnityTools/CesiumCityGenAligner/`
-  Unity Editor tool for aligning CityGen3D Landscape tiles with Cesium 3D Tiles.
 
 - `Tools/`
   Python utilities: `route_centerline_snap.py` snaps a planned route to the OSM road centerline for `AutoDriver`.
