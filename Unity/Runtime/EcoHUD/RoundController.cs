@@ -2,16 +2,6 @@
 //  RoundController.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
 //
-//  The study loop. One round of the Human-in-the-Loop Bayesian Optimization:
-//    1. read the 7 design parameters of the next candidate from the OptimizerBridge,
-//       and apply them to the eco-feedback HUD,
-//    2. reset the eco metric and run the FIXED route (autopilot for a demo, or let the
-//       participant drive) for `lapsPerRound` laps,
-//    3. when the lap(s) finish, read the round's energy (kWh/100km) and show the survey,
-//    4. write the 3 objectives back (energy MIN, task load MIN, acceptance MAX) and ask
-//       the optimizer for the next candidate,
-//    5. repeat until the budget is spent.
-//
 //  Works with MockOptimizerBridge (runs now, random search) or BoForUnityBridge (real BO).
 //  References auto-resolve via FindFirstObjectByType, or assign them in the Inspector.
 //
