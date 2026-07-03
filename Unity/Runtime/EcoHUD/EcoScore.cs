@@ -1,22 +1,6 @@
 // =============================================================================
 //  EcoScore.cs
 //  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  Eco-driving energy metric, from the STANDARD road-load (longitudinal vehicle
-//  dynamics) model, NOT a hand-made scoring formula:
-//      F = m*a + Cr*m*g + 0.5*rho*Cd*A*v^2     (inertia + rolling + aero)
-//      P = F*v                                  (wheel power)
-//      E = integral( P / eta ) dt , with regen recovery on braking (EV)
-//  Inputs come from CarController (currentSpeed km/h, currentAcceleration m/s^2).
-//  This produces TWO things:
-//    1. a real-time EcoScore (0-100, smoothed) for the HUD to display;
-//    2. a cumulative energy intensity (kWh/100km) over a round, which is the
-//       behavioural OBJECTIVE written back to the Bayesian optimizer.
-//  Only the parameter values and the application are adapted to this simulation
-//  (an arcade-physics car), so it serves as a standardized eco-driving proxy.
-//
-//  Drive comparability: run the SAME fixed route each round so kWh/100km is comparable.
-//
 // =============================================================================
 
 using UnityEngine;
