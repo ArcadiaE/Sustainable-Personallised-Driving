@@ -1,0 +1,19 @@
+# Key script versions - state at archive time
+# session: P27_20260824_193918  (08/24/2026 19:39:18 -> 08/24/2026 20:06:03)
+
+2026-08-23 00:58     20576 B  0245EEE8AFA0038E  SDVR_3\Assets\Editor\StudySetup.cs
+2026-08-23 00:58     14901 B  FB6A47DC386F219D  SDVR_3\Assets\Scripts\EcoHUD\EcoFeedbackHUD.cs
+2026-08-23 00:58     11289 B  F7786F79F4B04C67  SDVR_3\Assets\Scripts\EcoHUD\EcoScore.cs
+2026-08-23 00:58      3398 B  7BEDDD468CD9D65B  SDVR_3\Assets\Scripts\EcoHUD\RouteSet.cs
+2026-08-23 00:58     10089 B  C70A623FC4F94F1E  SDVR_3\Assets\Scripts\EcoHUD\RoundController.cs
+2026-08-23 00:58     10617 B  9EF39A6AF188FFC6  SDVR_3\Assets\Scripts\EcoHUD\StudyLogger.cs
+2026-08-23 00:58      9953 B  00C8E4069CF3CAE7  SDVR_3\Assets\Scripts\EcoHUD\YawMotion.cs
+2026-08-23 00:58     16288 B  AFBB89247253A088  SDVR_3\Assets\Scripts\EcoHUD\YawDirectLink.cs
+2026-08-23 00:58     30498 B  8BB6F6BA145F5A48  SDVR_3\Assets\Scripts\CarController.cs
+2026-08-19 12:46     54139 B  C099F1D7C5886182  SDVR_3\Assets\BOforUnity\BoForUnityManager.cs
+2026-08-23 00:58     16213 B  637FFA505DDE4936  SDVR_3\Assets\Scripts\EcoHUD\TargetMarkers.cs
+2026-08-23 00:58     21610 B  C113D5BB188DD368  SDVR_3\Assets\Scripts\EcoHUD\EncounterGuarantee.cs
+2026-08-23 00:58     14946 B  C2836A349DADC2E1  SDVR_3\Assets\Scripts\EcoHUD\MeetingResolver.cs
+2026-08-23 00:58      2873 B  99D6503648E2DFF0  SDVR_3\Assets\Scripts\EcoHUD\EdgePull.cs
+2026-08-23 00:58      8838 B  EFC48F9C269D2415  SDVR_3\Assets\Scripts\TrafficVariation.cs
+2026-08-23 00:58      5897 B  DF74A001EB9F870B  SDVR_3\Assets\Gley\TrafficSystem\Runtime\Scripts\Behaviours\FollowPlayer.cs
