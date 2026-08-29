@@ -1,37 +1,36 @@
-// =============================================================================
-//  EcoFeedbackHUD.cs
-//  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-// =============================================================================
-
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class EcoFeedbackHUD : MonoBehaviour
 {
     [Header("Source")]
-    public EcoScore eco;                      // auto-found if left null
+    public EcoScore eco;
 
     [Header("UI references (all optional)")]
     public RectTransform panel;               // scaled by Size
-    public CanvasGroup group;                 // alpha for visibility / intermittent flashing
-    public TextMeshProUGUI scoreText;         // numeric style
-    public Image scoreIcon;                   // symbolic style (leaf / arrow)
+    public CanvasGroup group;
+    public Text scoreText;                    // numeric style
+    public Image scoreIcon;
+    public Image leafBack;
+    public Image valenceIcon;
+    public Sprite happySprite, sadSprite;
     public Image fillImage;                   // coloured by score
+    public GameObject speedGroup;
+    public GameObject accelGroup;
     public Slider scoreBar;
-    public TextMeshProUGUI labelText;         // framing text (valence)
-    public GameObject peerObject;             // peer-comparison element
-    public TextMeshProUGUI peerText;
+    public Text labelText;                    // framing text (valence)
 
     [Header("Layer-2 design parameters (set by Round Controller / BO)")]
-    [Range(0f, 1f)] public float pEcoScoreVisible = 1f;   // >0.5 = show
-    [Range(0.6f, 1.6f)] public float pEcoScoreSize = 1f;
-    [Range(0f, 1f)] public float pColorSalience = 1f;     // 0 = muted, 1 = strong
-    [Range(0f, 1f)] public float pStyle = 0f;             // <0.5 numeric, >0.5 symbolic
-    [Range(0f, 1f)] public float pFeedbackRate = 1f;      // 0 intermittent, 1 continuous
-    [Range(0f, 1f)] public float pValence = 1f;           // 0 warning, 1 encouraging
-    [Range(0f, 1f)] public float pPeerCompare = 0f;       // >0.5 = show peer
-    public float peerScore = 70f;                         // the comparison value
+    public float pSizeLeaf = 1f;
+    public float pSizeScore = 1f;
+    public float pSizeFeedback = 1f;
+    public float pSizeSpeed = 1f;      // [0.6, 1.3]
+    public float pSizeAccel = 1f;
+    public float pSizeLabels = 1f;
+    [Range(0f, 1f)] public float pOpacity = 1f;
+
+    [Header("AR markers (auto-found if left null)")]
+    public TargetMarkers markers;
 
     [Header("Colours")]
     public Color highColor = new Color(0.13f, 0.77f, 0.37f);
@@ -39,79 +38,114 @@ public class EcoFeedbackHUD : MonoBehaviour
     public Color lowColor  = new Color(0.94f, 0.27f, 0.27f);
     public Color neutral   = new Color(0.60f, 0.60f, 0.60f);
 
-    float intermittentTimer;
     float shownScore = 100f;
 
     void Awake()
     {
         if (eco == null) eco = FindFirstObjectByType<EcoScore>();
+        if (markers == null) markers = FindFirstObjectByType<TargetMarkers>();
     }
 
     void Update()
     {
         if (eco == null) return;
         float live = eco.ecoScore;
-        bool visible = pEcoScoreVisible > 0.5f;
+        shownScore = live;
+        if (group != null) group.alpha = pOpacity;
 
-        // --- timing: feedback rate (intermittent <-> continuous) ---
-        float alpha = 0f;
-        if (visible)
+        const float HideEps = 0.6f;
+        ApplySize(leafBack != null ? leafBack.gameObject : null, pSizeLeaf, HideEps);
+        ApplySize(scoreText != null ? scoreText.gameObject : null, pSizeScore, HideEps);
+        if (scoreText != null && scoreText.gameObject.activeSelf)
+            scoreText.text = Mathf.RoundToInt(shownScore).ToString();
+        if (scoreIcon != null)
+            scoreIcon.fillAmount = Mathf.Clamp01(shownScore / 100f);
+        const float SpeedAlphaMin = 0.4f;
+        if (speedGroup != null)
         {
-            if (pFeedbackRate > 0.9f)
-            {
-                alpha = 1f; shownScore = live;            // continuous: always on, tracks live
-            }
-            else
-            {
-                float period = Mathf.Lerp(4f, 0.4f, pFeedbackRate); // s between refreshes
-                intermittentTimer += Time.deltaTime;
-                if (intermittentTimer >= period) { intermittentTimer = 0f; shownScore = live; }
-                alpha = Mathf.Clamp01(1.2f - intermittentTimer);    // flash ~1.2s then fade
-            }
+            if (!speedGroup.activeSelf) speedGroup.SetActive(true);
+            speedGroup.transform.localScale = Vector3.one * Mathf.Clamp(pSizeSpeed, 0.6f, 1.3f);
+            EnsureGroupAlpha(speedGroup).alpha = Mathf.Max(pOpacity, SpeedAlphaMin);
         }
-        if (group != null) group.alpha = alpha;
+        if (accelGroup != null)
+        {
+            ApplySize(accelGroup, pSizeAccel, HideEps);
+            if (accelGroup.activeSelf) EnsureGroupAlpha(accelGroup).alpha = pOpacity;
+        }
 
-        // --- display: size ---
-        if (panel != null) panel.localScale = Vector3.one * pEcoScoreSize;
-
-        // --- display: colour by score, scaled by salience ---
-        Color baseC = shownScore >= 80f ? highColor : (shownScore >= 60f ? midColor : lowColor);
-        Color c = Color.Lerp(neutral, baseC, Mathf.Clamp01(pColorSalience));
+        Color c = shownScore >= 80f ? highColor : (shownScore >= 60f ? midColor : lowColor);
         if (fillImage != null) fillImage.color = c;
         if (scoreText != null) scoreText.color = c;
         if (scoreIcon != null) scoreIcon.color = c;
 
-        // --- display: style (numeric vs symbolic) ---
-        bool symbolic = pStyle > 0.5f;
-        if (scoreText != null) scoreText.gameObject.SetActive(visible && !symbolic);
-        if (scoreIcon != null) scoreIcon.gameObject.SetActive(visible && symbolic);
-        if (scoreText != null) scoreText.text = Mathf.RoundToInt(shownScore).ToString();
-        if (scoreBar != null) scoreBar.value = shownScore;
-
-        // --- information: framing (valence) ---
+        bool good = shownScore >= 70f;
+        bool visible = pSizeFeedback > HideEps;
         if (labelText != null)
         {
             labelText.gameObject.SetActive(visible);
-            labelText.text = pValence > 0.5f
-                ? (shownScore >= 70f ? "Great eco-driving!" : "You can save more")
-                : (shownScore >= 70f ? "Efficient" : "High consumption");
+            labelText.transform.localScale = Vector3.one * Mathf.Max(pSizeFeedback, HideEps);
+            if (good)
+            {
+                labelText.text = "Great eco-driving!";
+            }
+            else
+            {
+                switch (eco != null ? eco.GetDominantIssue() : EcoScore.EcoIssue.None)
+                {
+                    case EcoScore.EcoIssue.Speed:
+                        labelText.text = (eco != null && eco.speedLossIsUnder)
+                            ? "Keep a steady pace" : "Try slowing down a little";
+                        break;
+                    case EcoScore.EcoIssue.Accel: labelText.text = "Try a gentler throttle"; break;
+                    case EcoScore.EcoIssue.Brake: labelText.text = "Try braking earlier, softer"; break;
+                    default: labelText.text = "You can save more"; break;
+                }
+            }
+        }
+        if (valenceIcon != null)
+        {
+            valenceIcon.gameObject.SetActive(visible);
+            valenceIcon.transform.localScale = Vector3.one * Mathf.Max(pSizeFeedback, HideEps);
+            valenceIcon.sprite = good ? happySprite : sadSprite;
+            valenceIcon.color = c;
         }
 
-        // --- information: peer comparison ---
-        bool peer = pPeerCompare > 0.5f;
-        if (peerObject != null) peerObject.SetActive(visible && peer);
-        if (peer && peerText != null)
+        if (markers != null)
         {
-            int d = Mathf.RoundToInt(shownScore - peerScore);
-            peerText.text = d >= 0 ? $"You +{d} vs peers" : $"Peers +{-d}";
+            markers.showVehicleMarkers = pSizeLabels > HideEps;
+            markers.markerScale = pSizeLabels;
         }
     }
 
-    // The Round Controller / BO calls this each iteration with the 7 proposed values.
-    public void ApplyDesignParams(float visible, float size, float salience,
-                                  float style, float rate, float valence, float peer)
+    static void ApplySize(GameObject go, float size, float eps)
     {
-        pEcoScoreVisible = visible; pEcoScoreSize = size; pColorSalience = salience;
-        pStyle = style; pFeedbackRate = rate; pValence = valence; pPeerCompare = peer;
+        if (go == null) return;
+        bool on = size > eps;
+        if (go.activeSelf != on) go.SetActive(on);
+        if (on) go.transform.localScale = Vector3.one * size;
+    }
+
+    static CanvasGroup EnsureGroupAlpha(GameObject go)
+    {
+        var cg = go.GetComponent<CanvasGroup>();
+        return cg != null ? cg : go.AddComponent<CanvasGroup>();
+    }
+
+    //   5 size_labels, 6 opacity
+    // logic above is untouched.
+    const float SizeMax = 1.3f;
+    const float SpeedMin = 0.6f;                   // legal readout floor
+    const float OpacityMin = 0.10f;
+    public void ApplyDesignParams(float sizeLeaf, float sizeScore, float sizeFeedback,
+                                  float sizeSpeed, float sizeAccel, float sizeLabels,
+                                  float opacity)
+    {
+        pSizeLeaf = sizeLeaf * SizeMax;
+        pSizeScore = sizeScore * SizeMax;
+        pSizeFeedback = sizeFeedback * SizeMax;
+        pSizeSpeed = SpeedMin + Mathf.Clamp01(sizeSpeed) * (SizeMax - SpeedMin);
+        pSizeAccel = sizeAccel * SizeMax;
+        pSizeLabels = sizeLabels * SizeMax;
+        pOpacity = OpacityMin + Mathf.Clamp01(opacity) * (1f - OpacityMin);
     }
 }

@@ -1,9 +1,6 @@
-// 第三人称跟车相机
 using CesiumForUnity;
 using UnityEngine;
 
-// Third-person chase camera with NaN/teleport guards.
-// Refuses to follow invalid or exploding target positions.
 public class CarFollowCamera : MonoBehaviour
 {
     public Transform target;
@@ -69,6 +66,7 @@ public class CarFollowCamera : MonoBehaviour
             return;
         }
 
+        // 防线2：目标飞出合理范围（物理爆炸/无限坠落）→ 本帧不动
         if (Mathf.Abs(tp.x) > maxValidCoordinate ||
             Mathf.Abs(tp.y) > maxValidCoordinate ||
             Mathf.Abs(tp.z) > maxValidCoordinate)
@@ -84,11 +82,11 @@ public class CarFollowCamera : MonoBehaviour
                                   - flatRotation * Vector3.forward * distance
                                   + Vector3.up * height;
 
-        float dt = Mathf.Min(Time.deltaTime, 0.05f);
+        float dt = Mathf.Min(Time.deltaTime, 0.05f); // 防线3：限制单帧步长
         transform.position = Vector3.Lerp(transform.position, desiredPosition, positionDamping * dt);
 
         Vector3 lookDir = (tp + Vector3.up * lookHeightOffset) - transform.position;
-        if (lookDir.sqrMagnitude < 0.0001f) return;
+        if (lookDir.sqrMagnitude < 0.0001f) return; // LookRotation 零向量保护
 
         Quaternion desiredRotation = Quaternion.LookRotation(lookDir);
         transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, rotationDamping * dt);

@@ -1,43 +1,14 @@
-# =============================================================================
-#  route_centerline_snap.py
-#  Offline generator for AutoDriver v2's `route` array (COMP0190 P87, Yike Zhang).
-#
-#  Purpose: take v1's hand-recorded loop (which sits ~2.3 m off the carriageway
-#  centre and sways side to side) and snap it onto the true CityGen road
-#  centrelines, so the demo car drives down the middle of the road with no
-#  side-to-side wobble. Same loop / streets / start; only the point positions move.
-#
-#  Pipeline:
-#    1. Parse the CityGen3D map database (YAML .asset): mapNodes (lat/lon) and
-#       mapWays (highway polylines, node ids packed as little-endian uint64 hex).
-#    2. Project every drivable-road node to Unity XZ with CityGen's own local-metre
-#       formula (GeoCoord.GetMapCoord). MapRoads parent is at world (0,0) in the
-#       current scene, so map XZ == world XZ (origin at tile centre).
-#    3. Map-match v1's route to the centreline network: per point pick the nearest
-#       segment, direction-gated (<=70 deg) so junctions don't grab a crossing
-#       street; median-filter the polyline assignment to kill 1-2 pt flicker.
-#    4. Resample at 1.5 m + light 5-pt moving average (rounds staggered-junction
-#       doglegs). Emit the C# array.
-#
-#  Usage:  python route_centerline_snap.py            # prints the C# route array
-#  Deps:   standard library only (no numpy). matplotlib optional for --plot.
-#
-#  Result quality (measured): final path to centreline median 0 m, p95 < 0.8 m;
-#  curvature noise max ~0.24 m (v1 ~0.15 m but 2.3 m off centre).
-# =============================================================================
+"""Snap a recorded driving loop onto the road-network centrelines."""
 import math, struct, re, statistics, sys
 
-DB        = r"F:/AAAUCL毕设/New Pipeline/Assets/Database/Pimlico (0, 0).asset"
-AUTODRIVER_V1 = r"F:/AAAUCL毕设/Scripts/EcoHUD/AutoDriver.cs"   # source of the v1 route to re-snap
+DB        = r"F:/AAAUCL毕设/SustainableDriving/Assets/Database/Pimlico (0, 0).asset"
+AUTODRIVER_V1 = r"F:/AAAUCL毕设/Scripts/EcoHUD/AutoDriver.cs"
 
 RMAX      = 9.0     # max snap distance (m)
-ANG_GATE  = 70.0    # max angle between segment dir and local route dir (deg)
+ANG_GATE  = 70.0
 RESAMPLE  = 1.5     # output spacing (m)
 SMOOTH_WIN = 5      # moving-average window (points)
-THROUGH_RUN = 18    # min consecutive v1 points on a road for it to count as a "through road"
-                    # (roads the loop actually drives). Everything below this is a side street
-                    # the route only brushes past at a junction -> excluded so the path does NOT
-                    # bulge toward the side-street mouth (that arc was what trapped the car).
+THROUGH_RUN = 18
 
 DRIVABLE = {
     "motorway","trunk","primary","secondary","tertiary","unclassified",
@@ -121,10 +92,8 @@ def load_centerlines():
 # ---------------------------------------------------------------- geometry
 def read_v1_route():
     txt = open(AUTODRIVER_V1, encoding="utf-8").read()
-    # only the big literal route array (skip Vector3 new(...) in code): take 2-arg new(x f, z f)
     m = re.findall(r"new\(\s*([-\d.]+)f\s*,\s*([-\d.]+)f\s*\)", txt)
     pts = [(float(a), float(b)) for a, b in m]
-    # the route literal is the long run; filter to the contiguous block by count heuristic:
     return pts
 
 def dist_pt_seg(p, a, b):
@@ -168,7 +137,6 @@ def match(route, polys):
                 d, c = project_on_poly(p, pts)
                 if d < gd: gd, gp, gc = d, pi, c
             best_pi[i], best_c[i] = gp, gc
-    # median-filter the polyline assignment (x2) to remove 1-2 pt junction flicker
     def medfilt(ids, win=5):
         h = win//2; out = ids[:]
         for i in range(len(ids)):

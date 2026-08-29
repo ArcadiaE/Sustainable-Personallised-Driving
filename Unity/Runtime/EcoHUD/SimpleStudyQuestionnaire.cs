@@ -1,18 +1,3 @@
-// =============================================================================
-//  SimpleStudyQuestionnaire.cs
-//  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  A minimal in-engine post-round survey, so the study loop is runnable without any
-//  external questionnaire asset. Wire a panel with sliders and a Submit button:
-//    - tlxSliders        : NASA-TLX subscales (6: mental, physical, temporal,
-//                          performance, effort, frustration). Averaged -> task load 0-100.
-//    - acceptanceSliders : van der Laan items (e.g. 9). Averaged -> acceptance 0-100.
-//  Any slider min/max is fine; values are normalized to 0-100. If nothing is wired and
-//  autoCompleteIfNoUI is on, it returns neutral scores so the loop still cycles (for
-//  testing the pipeline). Swap this for a QuestionnaireToolkit wrapper for the real study.
-//
-// =============================================================================
-
 using System;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,27 +13,75 @@ public class SimpleStudyQuestionnaire : StudyQuestionnaire
 
     [Header("Acceptance sliders / van der Laan (averaged -> acceptance 0-100, MAXIMIZE)")]
     public Slider[] acceptanceSliders;
+    [System.NonSerialized] public float[] lastTlxRaw;
+    [System.NonSerialized] public float[] lastAccRaw;
 
     [Header("Auto-complete with neutral scores if no UI is wired (pipeline testing)")]
     public bool autoCompleteIfNoUI = true;
 
+    [Header("Reset every slider to its midpoint each time the survey opens")]
+    public bool resetSlidersOnShow = true;
+
     Action<float, float> done;
 
-    void Awake() { if (panelRoot != null) panelRoot.SetActive(false); }
+    [Header("BO data quality: Submit stays disabled until EVERY slider has been moved — each item must be actively rated, not left at the default. Drag away and back still counts as moving that one.")]
+    public bool requireSliderTouch = true;
+    readonly System.Collections.Generic.HashSet<UnityEngine.UI.Slider> _touchedSet = new();
+    int _sliderTotal;
+    bool _listenersArmed;
+
+    void Awake()
+    {
+        if (panelRoot != null) panelRoot.SetActive(false);
+        ArmTouchListeners();
+    }
+
+    void ArmTouchListeners()
+    {
+        if (_listenersArmed) return;
+        _listenersArmed = true;
+        _sliderTotal = 0;
+        foreach (var arr in new[] { tlxSliders, acceptanceSliders })
+        {
+            if (arr == null) continue;
+            foreach (var s in arr)
+            {
+                if (s == null) continue;
+                _sliderTotal++;
+                var slider = s;   // capture per-iteration
+                slider.onValueChanged.AddListener(_ => MarkTouched(slider));
+            }
+        }
+    }
+
+    void MarkTouched(UnityEngine.UI.Slider s)
+    {
+        _touchedSet.Add(s);
+        if (submitButton != null)
+            submitButton.interactable = !requireSliderTouch || _touchedSet.Count >= _sliderTotal;
+    }
 
     public override void Show(Action<float, float> onDone)
     {
         done = onDone;
+        ArmTouchListeners();
+        if (resetSlidersOnShow)
+        {
+            ResetSliders(tlxSliders);
+            ResetSliders(acceptanceSliders);
+        }
+        _touchedSet.Clear();
         if (panelRoot != null) panelRoot.SetActive(true);
 
         if (submitButton != null)
         {
+            submitButton.interactable = !requireSliderTouch;
             submitButton.onClick.RemoveListener(Submit);
             submitButton.onClick.AddListener(Submit);
         }
         else if (autoCompleteIfNoUI)
         {
-            Submit();   // no UI: return neutral scores so the round can close
+            Submit();
         }
     }
 
@@ -59,12 +92,31 @@ public class SimpleStudyQuestionnaire : StudyQuestionnaire
 
     void Submit()
     {
+        if (requireSliderTouch && submitButton != null && _touchedSet.Count < _sliderTotal) return;
+        lastTlxRaw = Snapshot(tlxSliders);
+        lastAccRaw = Snapshot(acceptanceSliders);
         float taskLoad = Average(tlxSliders, 50f);
         float acceptance = Average(acceptanceSliders, 50f);
         if (submitButton != null) submitButton.onClick.RemoveListener(Submit);
         Hide();
         Action<float, float> cb = done; done = null;
         cb?.Invoke(taskLoad, acceptance);
+    }
+
+    static float[] Snapshot(Slider[] sliders)
+    {
+        if (sliders == null) return null;
+        var v = new float[sliders.Length];
+        for (int i = 0; i < sliders.Length; i++)
+            v[i] = sliders[i] != null ? sliders[i].value * 5f : 0f;
+        return v;
+    }
+
+    static void ResetSliders(Slider[] sliders)
+    {
+        if (sliders == null) return;
+        foreach (Slider s in sliders)
+            if (s != null) s.SetValueWithoutNotify((s.minValue + s.maxValue) * 0.5f);
     }
 
     static float Average(Slider[] sliders, float fallback)

@@ -1,10 +1,3 @@
-// =============================================================================
-//  RoadOnlyCut_v2.cs   (class RoadOnlyCutV2)
-//  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  OPEN VIA: Tools > CityGen3D x Cesium > Road Only Cut v2
-// =============================================================================
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +20,6 @@ namespace SustainableDriving.SimulationTools.EditorTools
         [SerializeField] private bool includeInactive = true;
         [SerializeField] private string landscapePrefix = "Landscape (";
 
-        // exclude non-drivable road children by name token (footpaths are the big one here)
         [SerializeField] private string excludeTokens = "Footpath";
 
         [SerializeField] private float roadMargin = 0.3f;

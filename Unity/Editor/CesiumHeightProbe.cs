@@ -1,10 +1,3 @@
-// =============================================================================
-//  CesiumHeightProbe.cs   (class CesiumHeightProbe)
-//  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  OPEN VIA: Tools > CityGen3D x Cesium > Cesium Height Probe
-// =============================================================================
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,8 +14,8 @@ namespace SustainableDriving.SimulationTools.EditorTools
         [SerializeField] private Cesium3DTileset tileset;
         [SerializeField] private CesiumGeoreference georeference;
         [SerializeField] private string landscapePrefix = "Landscape (";
-        [SerializeField] private int gridN = 64;            // gridN x gridN sample points over the study area (keep modest for a probe)
-        [SerializeField] private float sampleUnityY = 0f;   // Unity Y used to build the sample positions (ignored by sampling; only XZ matters)
+        [SerializeField] private int gridN = 64;
+        [SerializeField] private float sampleUnityY = 0f;
 
         private Vector2 areaMin = new(-256, -256), areaMax = new(1280, 1280);
         private Task<CesiumSampleHeightResult> _task;
@@ -88,7 +81,6 @@ namespace SustainableDriving.SimulationTools.EditorTools
             Detect();
             if (tileset == null || georeference == null) { status = "Need tileset + georeference."; return; }
 
-            // Build lon/lat sample positions from a Unity XZ grid.
             var lonLatH = new double3[gridN * gridN];
             int k = 0;
             for (int j = 0; j < gridN; j++)
@@ -159,7 +151,6 @@ namespace SustainableDriving.SimulationTools.EditorTools
             double p05 = Pct(0.05), p50 = Pct(0.50), p95 = Pct(0.95);
             double span = max - min;
 
-            // 12-bin histogram of (height - min)
             int bins = 12;
             var hist = new int[bins];
             foreach (var h in heights)
@@ -180,7 +171,6 @@ namespace SustainableDriving.SimulationTools.EditorTools
             }
             Debug.Log(sb.ToString());
 
-            // crude verdict: separable if there is a clear low cluster (ground) plus a meaningful tail above it
             double aboveFrac = (double)heights.Count(h => h > p05 + 3.0) / heights.Count;
             bool separable = span > 6.0 && aboveFrac > 0.05 && aboveFrac < 0.95;
             status = $"{success}/{_requested} ok. span {span:F1}m, median {p50:F1}, {aboveFrac * 100:F0}% above ground+3m. " +

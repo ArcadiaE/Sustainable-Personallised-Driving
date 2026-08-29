@@ -1,13 +1,3 @@
-// -----------------------------------------------------------------------------
-//  CesiumRigidAlign.cs
-//  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  Workflow: MEASURE -> APPLY -> wait for tiles to settle -> MEASURE again
-//  (expect |median| well under 0.5 m) -> done. REVERT restores the original height.
-// -----------------------------------------------------------------------------
-//  OPEN VIA: Tools > CityGen3D x Cesium > Rigid Align
-// =============================================================================
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -90,9 +80,6 @@ namespace SustainableDriving.SimulationTools.EditorTools
                      $"MapRoads {(mapRoads ? "OK" : "MISSING")}; terrains {terrains.Count}.";
         }
 
-        // Median (Cesium - terrain) sampled at road-vertex XZ positions.
-        // Only XZ is taken from the road meshes, so it works no matter what
-        // height the road preview layer currently sits at.
         private void Measure()
         {
             if (tileset == null || mapRoads == null || terrains.Count == 0)
@@ -156,8 +143,6 @@ namespace SustainableDriving.SimulationTools.EditorTools
             if (double.IsNaN(originalHeight)) originalHeight = georeference.height;
 
             Undo.RecordObject(georeference, "Rigid align Cesium height");
-            // Raising the georeference origin height lowers Cesium content in Unity
-            // space by the same amount, and vice versa.
             georeference.height += lastMedian;
             EditorUtility.SetDirty(georeference);
 
@@ -200,7 +185,7 @@ namespace SustainableDriving.SimulationTools.EditorTools
         {
             if (hit.transform == null || tileset == null) return false;
             if (!(hit.transform == tileset.transform || hit.transform.IsChildOf(tileset.transform))) return false;
-            return hit.normal.y >= groundNormalYMin; // walls out, ground/roofs in; median copes with sparse roofs over roads
+            return hit.normal.y >= groundNormalYMin;
         }
 
         private bool IsTerrainHit(RaycastHit hit)

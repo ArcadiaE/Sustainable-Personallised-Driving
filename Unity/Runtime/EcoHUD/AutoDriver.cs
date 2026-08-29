@@ -1,14 +1,3 @@
-// =============================================================================
-//  AutoDriver.cs
-//  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-//
-//  DEPLOY: class name is kept as `AutoDriver` so this file's contents replace
-//  Assets/Scripts/EcoHUD/AutoDriver.cs in place (the car's component + RoundController
-//  reference stay valid; the .meta / GUID is untouched). The archive copy is named
-//  AutoDriver_v2.cs; v1 is kept as AutoDriver.cs in the same folder for reference.
-//
-// =============================================================================
-
 using UnityEngine;
 
 [DefaultExecutionOrder(100)]
@@ -19,26 +8,59 @@ public class AutoDriver : MonoBehaviour
 
     [Header("Driving (tuned to hug bends, not clip the kerb)")]
     public bool engaged = true;                // off = keyboard drives
-    public float targetSpeedKmh = 16f;
-    public float lookAhead = 6f;               // metres ahead along the path to aim at (small = hugs the line)
-    public float fullSteerAngle = 24f;         // heading error (deg) giving full lock (small = commits to turns sooner)
-    [Range(0f, 1f)] public float turnSlowdown = 0.7f;
-    public float cornerSpeedKmh = 10f;         // brakes down to this through the sharpest corners
-    public float cornerBendDeg = 55f;          // summed upcoming bend (deg) over the look window that forces the full slowdown
-    public float cornerLookAhead = 16f;        // metres of path scanned ahead to anticipate a bend (so it brakes early)
+    public float targetSpeedKmh = 40f;
+    public float lookAhead = 6f;
+    public float fullSteerAngle = 24f;
+    [Range(0f, 1f)] public float turnSlowdown = 0.5f;
+    public float cornerSpeedKmh = 15f;
+    public float cornerBendDeg = 75f;
+    public float cornerLookAhead = 16f;
     public bool loop = true;
     public bool snapToStartOnPlay = true;
 
+    [Header("Lane keeping (needed once two-way ambient traffic exists)")]
+    [Tooltip("Metres the driven line is shifted to the LEFT of the road centreline (UK keep-left). 0 = drive the centreline. Negative = right.")]
+    public float laneOffsetM = 1.75f;
+
+    [Header("Traffic ahead (ease off instead of ramming slower ambient cars)")]
+    public bool trafficBrake = true;
+    public float trafficDetectM = 16f;
+    public float trafficStopM = 5f;
+    public LayerMask trafficMask = 1 << 9;
+
+    [Header("Meeting oncoming traffic (narrow two-way streets)")]
+    [Tooltip("Ease the pursuit target to the right and slow to meetSpeedKmh while an oncoming Gley vehicle is close ahead; smoothly recover ~1 s after it clears. Never reverses, never commands a full stop.")]
+    public bool meetPull = true;
+    public float meetDetectM = 18f;
+    public float meetLateralM = 2.2f;
+    public float meetOffsetM = 0.8f;
+    public float meetSpeedKmh = 15f;           // speed cap while meeting
+    float _meetBlend;                          // smoothed 0..1 activation
+    float _meetLastSeen = -999f;
+    readonly Collider[] _meetHits = new Collider[8];
+
+    [Header("Walls (invisible road-boundary walls line every carriageway)")]
+    [Tooltip("Whisker rays feel for the boundary walls; steering is biased toward the freer side. Narrow streets + the lane offset can otherwise wedge the car against a wall.")]
+    public bool wallAvoid = true;
+    public LayerMask wallMask = 1 | (1 << 29) | (1 << 30);
+    public float whiskerLen = 5f;
+    [Tooltip("Full throttle but standing still for this long = stuck. The autopilot NEVER reverses (real drivers don't reverse mid-road) — it holds, logs, and RoundController may end the round via stuckSeconds.")]
+    public float wedgeSeconds = 4f;
+    [Tooltip("Read-only: how long the autopilot has been pushing without moving. RoundController ends the round when this passes its own threshold.")]
+    public float stuckSeconds;
+    [Tooltip("Read-only: whether the current stall has a traffic vehicle ahead (a queue — be patient) or not (geometry wedge — abort sooner).")]
+    public bool stuckTrafficAhead;
+    float _wedgeTime;
+
     [Header("Record mode: tick this + untick 'engaged', drive the loop by keyboard; it writes Assets/recorded_route.txt")]
     public bool recordMode = false;
-    public float recordSpacing = 2f;           // log a point every this many metres driven
+    public float recordSpacing = 2f;
     System.Text.StringBuilder _rec;
     Vector2 _lastRec = new(9e9f, 9e9f);
 
     public int laps { get; private set; }
     public event System.Action onLapComplete;
 
-    // Route snapped to CityGen road centrelines (see header). Same loop as v1. World XZ.
     static readonly Vector2[] route = {
         new(552.27f,99.98f), new(551.32f,99.76f), new(550.40f,99.97f), new(549.45f,100.54f), new(548.29f,101.34f), new(547.23f,102.35f), new(546.21f,103.45f), new(545.19f,104.55f),
         new(544.18f,105.66f), new(543.17f,106.77f), new(542.17f,107.89f), new(541.19f,109.02f), new(540.20f,110.15f), new(539.22f,111.29f), new(538.24f,112.43f), new(537.26f,113.56f),
@@ -106,20 +128,119 @@ public class AutoDriver : MonoBehaviour
 
     int nearIdx;
 
-    void Awake() { if (car == null) car = FindFirstObjectByType<CarController>(); }
+    Vector2[] _pts;
+    Vector2[] _drive;
+    bool _arrived;
+    public event System.Action onRouteComplete;
+
+    public void SetRoute(Vector2[] pts, bool loopRoute) => SetRoute(pts, null, loopRoute);
+
+    public void SetRoute(Vector2[] pts, float[] halfw, bool loopRoute)
+    {
+        DensifyWith(pts, halfw != null && halfw.Length == pts.Length ? halfw : null,
+                    2f, out _pts, out _halfwDense);
+        loop = loopRoute;
+        BuildDriveLine();
+        nearIdx = 0;
+        laps = 0;
+        _arrived = false;
+        _holdBrake = false;
+    }
+
+    float[] _halfwDense;
+    bool _holdBrake;
+
+    static void DensifyWith(Vector2[] pts, float[] hw, float maxStep,
+                            out Vector2[] outPts, out float[] outHw)
+    {
+        if (pts == null || pts.Length < 2) { outPts = pts; outHw = null; return; }
+        var lp = new System.Collections.Generic.List<Vector2>(pts.Length * 4);
+        var lh = hw != null ? new System.Collections.Generic.List<float>(pts.Length * 4) : null;
+        for (int i = 0; i < pts.Length - 1; i++)
+        {
+            Vector2 a = pts[i], b = pts[i + 1];
+            lp.Add(a); lh?.Add(hw[i]);
+            int steps = Mathf.FloorToInt((b - a).magnitude / maxStep);
+            for (int s = 1; s <= steps; s++)
+            {
+                float t = (float)s / (steps + 1);
+                lp.Add(Vector2.Lerp(a, b, t));
+                lh?.Add(Mathf.Lerp(hw[i], hw[i + 1], t));
+            }
+        }
+        lp.Add(pts[pts.Length - 1]); lh?.Add(hw[hw.Length - 1]);
+        outPts = lp.ToArray(); outHw = lh?.ToArray();
+    }
+
+    void BuildDriveLine()
+    {
+        int n = _pts.Length;
+        _drive = new Vector2[n];
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 prev = loop ? _pts[(i - 1 + n) % n] : _pts[Mathf.Max(0, i - 1)];
+            Vector2 next = loop ? _pts[(i + 1) % n] : _pts[Mathf.Min(n - 1, i + 1)];
+            Vector2 dir = (next - prev).normalized;
+
+            float off = laneOffsetM;
+            if (_halfwDense != null && i < _halfwDense.Length)
+            {
+                float hw = _halfwDense[i];
+                off = Mathf.Min(Mathf.Max(hw * 0.5f, 1.1f), laneOffsetM);
+                off = Mathf.Min(off, Mathf.Max(0.5f, hw - 1.35f));
+            }
+            int i0 = loop ? (i - 2 + n) % n : Mathf.Max(0, i - 2);
+            int i1 = loop ? (i + 2) % n : Mathf.Min(n - 1, i + 2);
+            Vector2 v1 = _pts[i] - _pts[i0], v2 = _pts[i1] - _pts[i];
+            if (v1.sqrMagnitude > 1e-3f && v2.sqrMagnitude > 1e-3f)
+            {
+                float bend = Vector2.Angle(v1, v2);
+                off *= Mathf.Lerp(1f, 0.45f, Mathf.Clamp01(bend / 30f));
+            }
+            _drive[i] = _pts[i] + new Vector2(dir.y, -dir.x) * off; // RIGHT of travel
+        }
+    }
+
+    void Awake()
+    {
+        if (car == null) car = FindFirstObjectByType<CarController>();
+        if (_pts == null)
+        {
+            Debug.LogWarning("[AutoDriver] No designated route set — falling back to the BAKED LEGACY LOOP. " +
+                             "If this is a study round, RouteSet failed to load its startNode.");
+            SetRoute(route, true);
+        }
+    }
 
     void Start() { if (snapToStartOnPlay) SnapToStart(); }
 
-    static Vector2 Pt(int i) => route[((i % route.Length) + route.Length) % route.Length];
+    Vector2 Pt(int i)
+    {
+        if (_drive == null) { _pts = route; BuildDriveLine(); }
+        int n = _drive.Length;
+        return loop ? _drive[((i % n) + n) % n] : _drive[Mathf.Clamp(i, 0, n - 1)];
+    }
 
-    // Place the car on route[0] AND face it along the route, so it starts cleanly.
     public void SnapToStart()
     {
         if (car == null) return;
         Vector2 p0 = Pt(0), p1 = Pt(1);
-        Vector3 pos = new(p0.x, car.transform.position.y, p0.y);
+        float y = car.transform.position.y;
+        int groundMask = (1 << 30) | (1 << 15);   // Highway | Landscape
+        if (Physics.Raycast(new Vector3(p0.x, 300f, p0.y), Vector3.down,
+                            out RaycastHit hit, 600f, groundMask))
+            y = hit.point.y + 0.05f;
+        Vector3 pos = new(p0.x, y, p0.y);
         Vector3 dir = new(p1.x - p0.x, 0f, p1.y - p0.y);
         Quaternion rot = dir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(dir, Vector3.up) : car.transform.rotation;
+
+#if GLEY_TRAFFIC_SYSTEM
+        Gley.TrafficSystem.API.ClearTrafficOnArea(pos, 30f);
+        StartCoroutine(ClearStartAgain(pos));
+#endif
+
+        var yawRig = FindFirstObjectByType<YawMotion>();
+        if (yawRig != null) yawRig.SuppressForSeconds(1.0f);   // s
 
         car.transform.SetPositionAndRotation(pos, rot);
         var rb = car.GetComponent<Rigidbody>();
@@ -132,6 +253,99 @@ public class AutoDriver : MonoBehaviour
     }
 
     public void ResetRoute() { nearIdx = 0; laps = 0; }
+
+    public bool GetNextTurn(out float distanceM, out float signedAngleDeg)
+    {
+        distanceM = 0f; signedAngleDeg = 0f;
+        if (_pts == null || _pts.Length < 3 || loop) return false;
+        int n = _pts.Length;
+        float dist = 0f;
+        int i = Mathf.Clamp(nearIdx, 0, n - 3);
+        while (i < n - 2 && dist < 200f)
+        {
+            float acc = 0f, w = 0f; int j = i;
+            while (j < n - 2 && w < 10f)
+            {
+                Vector2 v1 = _pts[j + 1] - _pts[j];
+                Vector2 v2 = _pts[j + 2] - _pts[j + 1];
+                acc += Vector2.SignedAngle(v1, v2);   // Unity: + = counter-clockwise
+                w += v1.magnitude;
+                j++;
+            }
+            if (Mathf.Abs(acc) > 30f)
+            {
+                distanceM = dist;
+                signedAngleDeg = -acc;                // flip: + = RIGHT turn
+                return true;
+            }
+            dist += (_pts[i + 1] - _pts[i]).magnitude;
+            i++;
+        }
+        return false;
+    }
+
+    public float GetRemainingM()
+    {
+        if (_pts == null || _pts.Length < 2 || loop) return 0f;
+        float d = 0f;
+        for (int i = Mathf.Clamp(nearIdx, 0, _pts.Length - 2); i < _pts.Length - 1; i++)
+            d += (_pts[i + 1] - _pts[i]).magnitude;
+        return d;
+    }
+
+#if GLEY_TRAFFIC_SYSTEM
+    System.Collections.IEnumerator ClearStartAgain(Vector3 pos)
+    {
+        yield return new WaitForSeconds(0.15f);
+        Gley.TrafficSystem.API.ClearTrafficOnArea(pos, 22f);
+        yield return new WaitForSeconds(0.55f);
+        Gley.TrafficSystem.API.ClearTrafficOnArea(pos, 22f);
+    }
+#endif
+
+    bool TrackRouteProgress(out int bestI)
+    {
+        bestI = nearIdx;
+        if (_pts == null || _pts.Length < 2) return false;
+
+        Vector2 carXZ = new(car.transform.position.x, car.transform.position.z);
+        int n = _pts.Length;
+
+        float bestD = float.MaxValue;
+        for (int k = -2; k <= 10; k++)
+        {
+            int i = nearIdx + k;
+            float d = (Pt(i) - carXZ).sqrMagnitude;
+            if (d < bestD) { bestD = d; bestI = i; }
+        }
+        if (loop)
+        {
+            if (bestI / n > nearIdx / n) { laps++; onLapComplete?.Invoke(); }
+            nearIdx = ((bestI % n) + n) % n;
+            return false;
+        }
+
+        nearIdx = Mathf.Clamp(bestI, 0, n - 1);
+        Vector2 endPt = Pt(n - 1);
+        Vector3 fwdA = car.transform.forward;
+        bool passedEnd = nearIdx >= n - 2 &&
+                         (endPt.x - carXZ.x) * fwdA.x + (endPt.y - carXZ.y) * fwdA.z < 0f;
+        if (!_arrived && nearIdx >= n - 2 && ((endPt - carXZ).magnitude < 8f || passedEnd))
+        {
+            _arrived = true;
+            bool wasAutopilot = engaged;
+            engaged = false;
+            if (wasAutopilot)
+            {
+                _holdBrake = true;
+                car.throttleInput = 0f;
+                car.steerInput = 0f;
+            }
+            onRouteComplete?.Invoke();
+            return true;
+        }
+        return false;
+    }
 
     void Update()
     {
@@ -147,25 +361,24 @@ public class AutoDriver : MonoBehaviour
                 _rec.Append($"new({xz.x:F1}f,{xz.y:F1}f), ");
                 System.IO.File.WriteAllText(Application.dataPath + "/recorded_route.txt", _rec.ToString());
             }
-            return;   // don't auto-drive while recording; CarController + keyboard drives
+            return;
         }
 
-        if (!engaged) return;
-
-        Vector2 carXZ = new(car.transform.position.x, car.transform.position.z);
-
-        // advance the tracked index to the closest point ahead (local window, keeps progress monotonic)
-        int bestI = nearIdx; float bestD = float.MaxValue;
-        for (int k = -2; k <= 10; k++)
+        if (!engaged)
         {
-            int i = nearIdx + k;
-            float d = (Pt(i) - carXZ).sqrMagnitude;
-            if (d < bestD) { bestD = d; bestI = i; }
+            if (_holdBrake && car != null)
+            {
+                car.throttleInput = car.currentSpeed > 0.5f ? -1f : 0f;
+                if (car.currentSpeed <= 0.5f) _holdBrake = false;
+            }
+            TrackRouteProgress(out _);
+            return;
         }
-        if (bestI / route.Length > nearIdx / route.Length) { laps++; onLapComplete?.Invoke(); }
-        nearIdx = ((bestI % route.Length) + route.Length) % route.Length;
 
-        // look-ahead target: walk forward from the closest point until lookAhead metres
+        if (TrackRouteProgress(out int bestI)) return;   // arrived this frame
+        Vector2 carXZ = new(car.transform.position.x, car.transform.position.z);
+        int n = _pts.Length;
+
         Vector2 target = Pt(bestI);
         float acc = (target - carXZ).magnitude;
         int j = bestI;
@@ -174,7 +387,49 @@ public class AutoDriver : MonoBehaviour
             Vector2 a = Pt(j), b = Pt(j + 1);
             acc += (b - a).magnitude; j++;
             target = b;
-            if (!loop && (j % route.Length) == route.Length - 1) break;
+            if (!loop && j >= n - 1) break;
+        }
+
+        if (meetPull)
+        {
+            bool oncoming = false;
+            Vector3 fwdM = car.transform.forward; fwdM.y = 0f; fwdM.Normalize();
+            Vector3 rightM = new(fwdM.z, 0f, -fwdM.x);
+            Vector3 boxCentre = car.transform.position + fwdM * (meetDetectM * 0.5f) + Vector3.up * 0.7f;
+            int nHits = Physics.OverlapBoxNonAlloc(boxCentre,
+                new Vector3(meetLateralM + 1.2f, 1.2f, meetDetectM * 0.5f),
+                _meetHits, Quaternion.LookRotation(fwdM, Vector3.up), trafficMask);
+            for (int h = 0; h < nHits; h++)
+            {
+                Transform tr = _meetHits[h].attachedRigidbody != null
+                    ? _meetHits[h].attachedRigidbody.transform : _meetHits[h].transform;
+                Vector3 delta = tr.position - car.transform.position;
+                float ahead = Vector3.Dot(delta, fwdM);
+                if (ahead < 1f || ahead > meetDetectM) continue;
+                if (Mathf.Abs(Vector3.Dot(delta, rightM)) > meetLateralM) continue;
+                if (Vector3.Dot(tr.forward, fwdM) >= -0.6f) continue;   // not oncoming
+                oncoming = true;
+                break;
+            }
+            if (oncoming) _meetLastSeen = Time.time;
+            float want = Time.time - _meetLastSeen < 1f ? 1f : 0f;
+            _meetBlend = Mathf.MoveTowards(_meetBlend, want, Time.deltaTime * 2f);
+            if (_meetBlend > 0.001f)
+            {
+                float hwM = _halfwDense != null && bestI < _halfwDense.Length ? _halfwDense[bestI] : 2.8f;
+                float driveOff = Mathf.Min(Mathf.Max(hwM * 0.5f, 1.1f), laneOffsetM);
+                driveOff = Mathf.Min(driveOff, Mathf.Max(0.5f, hwM - 1.35f));
+                float extra = Mathf.Min(meetOffsetM, (hwM - 1.0f) - driveOff);
+                if (extra > 0f)
+                {
+                    Vector2 dTo = target - carXZ;
+                    if (dTo.sqrMagnitude > 1e-3f)
+                    {
+                        dTo.Normalize();
+                        target += new Vector2(dTo.y, -dTo.x) * (extra * _meetBlend);   // right of travel
+                    }
+                }
+            }
         }
 
         // steer toward target (XZ)
@@ -183,22 +438,81 @@ public class AutoDriver : MonoBehaviour
         float ang = Vector3.SignedAngle(fwd.normalized, to.normalized, Vector3.up);
         float steer = Mathf.Clamp(ang / Mathf.Max(1f, fullSteerAngle), -1f, 1f);
 
-        // anticipate the upcoming bend and brake INTO the corner (human-like: slow before turning)
+        float obstacleAheadM = float.MaxValue;
+        if (wallAvoid)
+        {
+            Vector3 wOrigin = car.transform.position + Vector3.up * 1.0f;
+            Vector3 fwdN = fwd.normalized;
+            float Whisker(float deg)
+            {
+                Vector3 d = Quaternion.Euler(0f, deg, 0f) * fwdN;
+                return Physics.Raycast(wOrigin, d, out RaycastHit h, whiskerLen, wallMask) ? h.distance : whiskerLen;
+            }
+            float dl20 = Whisker(-20f), dr20 = Whisker(20f);
+            float dl8 = Whisker(-8f), dr8 = Whisker(8f);
+            float dl = Mathf.Min(dl20, dl8), dr = Mathf.Min(dr20, dr8);
+            steer = Mathf.Clamp(steer + (dl - dr) / whiskerLen * 0.6f, -1f, 1f);
+            obstacleAheadM = Mathf.Min(dl8, dr8);
+        }
+
         float bendAhead = 0f, scan = 0f; int b0 = bestI;
         while (scan < cornerLookAhead)
         {
             Vector2 pa = Pt(b0), pb = Pt(b0 + 1), pc = Pt(b0 + 2);
             bendAhead += Vector2.Angle(pb - pa, pc - pb);
             scan += (pb - pa).magnitude; b0++;
-            if (!loop && (b0 % route.Length) == route.Length - 1) break;
+            if (!loop && b0 >= n - 2) break;
         }
         float cornerCap = Mathf.Lerp(targetSpeedKmh, cornerSpeedKmh, Mathf.Clamp01(bendAhead / Mathf.Max(1f, cornerBendDeg)));
 
-        // throttle: hold target speed, ease off for heading error, and never exceed the corner cap
         float tgt = targetSpeedKmh * Mathf.Clamp01(1f - Mathf.Abs(ang) / 90f * turnSlowdown);
         tgt = Mathf.Min(tgt, cornerCap);
+
+        if (_meetBlend > 0.001f)
+            tgt = Mathf.Min(tgt, Mathf.Lerp(targetSpeedKmh, meetSpeedKmh, _meetBlend));
+
+        if (obstacleAheadM < 4.5f)
+            tgt = Mathf.Min(tgt, Mathf.Lerp(0f, cornerSpeedKmh,
+                Mathf.Clamp01((obstacleAheadM - 1.5f) / 3f)));
+
+        if (trafficBrake)
+        {
+            Vector3 origin = car.transform.position + Vector3.up * 0.6f;
+            if (Physics.SphereCast(origin, 1.0f, fwd.normalized, out RaycastHit hit, trafficDetectM, trafficMask))
+            {
+                Transform hitTr = hit.collider.attachedRigidbody != null
+                    ? hit.collider.attachedRigidbody.transform : hit.collider.transform;
+                if (hit.distance <= trafficStopM)
+                    tgt = 0f;
+                else if (Vector3.Dot(hitTr.forward, fwd.normalized) > 0.3f)
+                    tgt = Mathf.Min(tgt, Mathf.Lerp(0f, targetSpeedKmh,
+                        Mathf.Clamp01((hit.distance - trafficStopM) / Mathf.Max(1f, trafficDetectM - trafficStopM))));
+            }
+        }
+
         float sp = car.currentSpeed;
-        float throttle = sp < tgt - 1f ? 1f : (sp > tgt + 1f ? -1f : 0f);
+        float throttle = sp < tgt - 1f ? 1f : (sp > tgt + 3f ? -1f : 0f);
+
+        if (throttle > 0.5f && sp < 1f)
+        {
+            _wedgeTime += Time.deltaTime;
+            stuckSeconds = _wedgeTime;
+            if (_wedgeTime > wedgeSeconds)
+            {
+                stuckTrafficAhead = Physics.CheckBox(
+                    car.transform.position + car.transform.forward * 3.2f + Vector3.up * 0.7f,
+                    new Vector3(1.8f, 0.8f, 2.6f), car.transform.rotation, trafficMask);
+                if (Mathf.Repeat(_wedgeTime, 5f) < Time.deltaTime)
+                    Debug.LogWarning($"[AutoDriver] stationary {_wedgeTime:F0}s at {car.transform.position:F1} — " +
+                                     (stuckTrafficAhead ? "traffic ahead, waiting." : "no traffic detected (geometry wedge?), holding."));
+            }
+        }
+        else
+        {
+            _wedgeTime = 0f;
+            stuckSeconds = 0f;
+            stuckTrafficAhead = false;
+        }
 
         car.steerInput = steer;
         car.throttleInput = throttle;
@@ -206,12 +520,14 @@ public class AutoDriver : MonoBehaviour
 
     void OnDrawGizmos()
     {
+        var pts = _pts ?? route;
         Gizmos.color = Color.cyan;
         float y = car != null ? car.transform.position.y : 58f;
-        for (int i = 0; i < route.Length; i++)
+        int last = loop ? pts.Length : pts.Length - 1;
+        for (int i = 0; i < last; i++)
         {
-            Vector3 a = new(route[i].x, y, route[i].y);
-            Vector3 b = new(route[(i + 1) % route.Length].x, y, route[(i + 1) % route.Length].y);
+            Vector3 a = new(pts[i].x, y, pts[i].y);
+            Vector3 b = new(pts[(i + 1) % pts.Length].x, y, pts[(i + 1) % pts.Length].y);
             Gizmos.DrawLine(a, b);
         }
     }

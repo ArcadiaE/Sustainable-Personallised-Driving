@@ -1,8 +1,3 @@
-// =============================================================================
-//  MockOptimizerBridge.cs
-//  Copyright (c) 2026 Yike Zhang. COMP0190 P87, UCL CS (supervisor: Dr Mark Colley).
-// =============================================================================
-
 using UnityEngine;
 
 public class MockOptimizerBridge : OptimizerBridge
@@ -10,9 +5,9 @@ public class MockOptimizerBridge : OptimizerBridge
     [Header("Budget")]
     public int totalBudget = 15;
 
-    [Header("Parameter ranges [min,max], order: 0 visible,1 size,2 salience,3 style,4 rate,5 valence,6 peer")]
+    [Header("Ranges, order: size_leaf/score/feedback/speed/accel/labels, opacity — standardized [0,1], HUD maps to physical")]
     public Vector2[] ranges = {
-        new(0f, 1f), new(0.6f, 1.6f), new(0f, 1f), new(0f, 1f), new(0f, 1f), new(0f, 1f), new(0f, 1f),
+        new(0f, 1f), new(0f, 1f), new(0f, 1f), new(0f, 1f), new(0f, 1f), new(0f, 1f), new(0f, 1f),
     };
 
     int iter = -1;
@@ -22,6 +17,7 @@ public class MockOptimizerBridge : OptimizerBridge
     public override int CurrentIteration => Mathf.Max(0, iter);
     public override int TotalBudget => totalBudget;
     public override bool HasParameters => ready;
+    public override bool IsFinished => iter >= totalBudget;
     public override float GetParameter(int index) => current[Mathf.Clamp(index, 0, ParameterCount - 1)];
 
     public override void SetObjective(int index, float value)
