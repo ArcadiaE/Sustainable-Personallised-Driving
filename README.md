@@ -17,6 +17,7 @@ Code, releasable study data, and analysis for an MSc dissertation study (UCL, CO
   - [Data release and privacy](#data-release-and-privacy)
   - [Third-party assets (not distributed)](#third-party-assets-not-distributed)
   - [Reproducing the analysis](#reproducing-the-analysis)
+  - [License](#license)
   - [Thesis](#thesis)
 - [中文](#概述)
   - [概述](#概述)
@@ -25,6 +26,7 @@ Code, releasable study data, and analysis for an MSc dissertation study (UCL, CO
   - [数据发布与隐私](#数据发布与隐私)
   - [未随仓库分发的第三方资产](#未随仓库分发的第三方资产)
   - [复现分析](#复现分析)
+  - [许可证](#许可证)
   - [论文](#论文)
 
 ---
@@ -84,6 +86,10 @@ The Unity project depends on assets and services that cannot be redistributed he
 
 R 4.6.1. `Analysis/analysis.R` reads the data layout described in `Data/README.md` and regenerates the statistics, figures, and tables reported in the thesis (outputs included under `Analysis/output/`). Package versions are listed in the thesis appendix.
 
+## License
+
+Code is released under the [MIT License](LICENSE). Files under `Unity/BOforUnity/` derive from the MIT-licensed [BO-for-Unity](https://github.com/Pascal-Jansen/Bayesian-Optimization-for-Unity) toolkit and retain its notice. The study data (`Data/`) and analysis figures (`Analysis/output/`) are available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The dissertation (`Thesis/`) is (c) the author, all rights reserved.
+
 ## Thesis
 
 `Thesis/` contains the dissertation: *Sustainable Personalised Driving: Applying Human-in-the-Loop Multi-Objective Bayesian Optimisation to Eco-Driving Interface Design* (MSc Artificial Intelligence for Sustainable Development, UCL). The study was approved by the UCL Research Ethics Committee (project 1165).
@@ -133,6 +139,10 @@ Unity 工程依赖无法在此再分发的资产与服务：Cesium for Unity（1
 ## 复现分析
 
 R 4.6.1。`Analysis/analysis.R` 读取 `Data/README.md` 描述的数据布局，重新生成论文所报告的统计量、图和表（输出已附于 `Analysis/output/`）。软件包版本见论文附录。
+
+## 许可证
+
+代码以 [MIT 许可证](LICENSE)发布；`Unity/BOforUnity/` 下的文件衍生自 MIT 许可的 [BO-for-Unity](https://github.com/Pascal-Jansen/Bayesian-Optimization-for-Unity) 工具包并保留其声明。研究数据（`Data/`）与分析图表（`Analysis/output/`）以 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 提供。学位论文（`Thesis/`）版权归作者所有，不在上述许可范围内。
 
 ## 论文
 
