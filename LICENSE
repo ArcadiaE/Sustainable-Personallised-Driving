@@ -12,18 +12,6 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-The files under Unity/BOforUnity/ are modified from or additions to the
-Bayesian-Optimization-for-Unity toolkit, MIT License, Copyright (c) Pascal
-Jansen (https://github.com/Pascal-Jansen/Bayesian-Optimization-for-Unity);
-the upstream copyright and permission notice applies to those files.
-
-The study data under Data/ and the figures under Analysis/output/ are made
-available under the Creative Commons Attribution 4.0 International licence
-(CC BY 4.0, https://creativecommons.org/licenses/by/4.0/).
-
-The dissertation under Thesis/ is (c) 2026 Yike Zhang, all rights reserved;
-it is included for reference and is not covered by the licences above.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE

@@ -88,7 +88,7 @@ R 4.6.1. `Analysis/analysis.R` reads the data layout described in `Data/README.m
 
 ## License
 
-Code is released under the [MIT License](LICENSE). Files under `Unity/BOforUnity/` derive from the MIT-licensed [BO-for-Unity](https://github.com/Pascal-Jansen/Bayesian-Optimization-for-Unity) toolkit and retain its notice. The study data (`Data/`) and analysis figures (`Analysis/output/`) are available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The dissertation (`Thesis/`) is (c) the author, all rights reserved.
+Code is released under the [MIT License](LICENSE) (c) 2026 Yike Zhang. Files under `Unity/BOforUnity/` derive from the MIT-licensed [BO-for-Unity](https://github.com/Pascal-Jansen/Bayesian-Optimization-for-Unity) toolkit and retain its notice. The study data (`Data/`) and analysis figures (`Analysis/output/`) are available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The dissertation (`Thesis/`) is (c) the author, all rights reserved.
 
 ## Thesis
 
