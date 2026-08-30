@@ -14,7 +14,7 @@ public class CarFollowCamera : MonoBehaviour
     CesiumCameraManager cameraManager;
     Camera carCamera;
     bool cameraAdded;
-    public float maxValidCoordinate = 100000f; // 超过视为物理爆炸，停止跟随
+    public float maxValidCoordinate = 100000f;
 
     void OnEnable()
     {
@@ -66,7 +66,6 @@ public class CarFollowCamera : MonoBehaviour
             return;
         }
 
-        // 防线2：目标飞出合理范围（物理爆炸/无限坠落）→ 本帧不动
         if (Mathf.Abs(tp.x) > maxValidCoordinate ||
             Mathf.Abs(tp.y) > maxValidCoordinate ||
             Mathf.Abs(tp.z) > maxValidCoordinate)
@@ -82,11 +81,11 @@ public class CarFollowCamera : MonoBehaviour
                                   - flatRotation * Vector3.forward * distance
                                   + Vector3.up * height;
 
-        float dt = Mathf.Min(Time.deltaTime, 0.05f); // 防线3：限制单帧步长
+        float dt = Mathf.Min(Time.deltaTime, 0.05f);
         transform.position = Vector3.Lerp(transform.position, desiredPosition, positionDamping * dt);
 
         Vector3 lookDir = (tp + Vector3.up * lookHeightOffset) - transform.position;
-        if (lookDir.sqrMagnitude < 0.0001f) return; // LookRotation 零向量保护
+        if (lookDir.sqrMagnitude < 0.0001f) return;
 
         Quaternion desiredRotation = Quaternion.LookRotation(lookDir);
         transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, rotationDamping * dt);

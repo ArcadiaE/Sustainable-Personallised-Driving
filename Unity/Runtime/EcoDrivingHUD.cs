@@ -14,9 +14,9 @@ public class EcoDrivingHUD : MonoBehaviour
     public float ecoScore = 86f;
 
     [Header("Color Thresholds")]
-    public Color highScoreColor = new Color(0.13f, 0.77f, 0.37f);  // 绿
-    public Color midScoreColor  = new Color(0.92f, 0.70f, 0.03f);  // 黄
-    public Color lowScoreColor  = new Color(0.94f, 0.27f, 0.27f);  // 红
+    public Color highScoreColor = new Color(0.13f, 0.77f, 0.37f);
+    public Color midScoreColor  = new Color(0.92f, 0.70f, 0.03f);
+    public Color lowScoreColor  = new Color(0.94f, 0.27f, 0.27f);
 
     void Update()
     {

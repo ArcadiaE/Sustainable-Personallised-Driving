@@ -6,25 +6,25 @@ using UnityEngine.InputSystem.Controls;
 public class CarController : MonoBehaviour
 {
     [Header("Driving Settings")]
-    public float motorForce = 8000f;        // 引擎力（N）
-    public float brakeForce = 15000f;       // 刹车力
-    public float maxSpeed = 25f;            // 最大前进速度 (m/s)
-    public float maxReverseSpeed = 10f;     // 最大倒车速度
+    public float motorForce = 8000f;
+    public float brakeForce = 15000f;
+    public float maxSpeed = 25f;
+    public float maxReverseSpeed = 10f;
 
     [Header("Steering")]
-    public float maxSteerAngle = 35f;       // 最大前轮转角（度）
-    public float steeringResponse = 5f;     // 方向盘响应速度
-    public float turnRadiusFactor = 4f;     // 转弯半径系数（越小半径越小）
+    public float maxSteerAngle = 35f;
+    public float steeringResponse = 5f;
+    public float turnRadiusFactor = 4f;
 
     [Header("Physics")]
     public float drag = 0.15f;
     public float groundedDrag = 1.5f;
-    public float sidewaysFriction = 5f;     // 侧向摩擦（每秒消除侧滑的比例系数）
-    public float absoluteMaxSpeed = 80f;    // 速度硬上限（m/s），防物理爆炸
+    public float sidewaysFriction = 5f;
+    public float absoluteMaxSpeed = 80f;
 
     [Header("Auto Collider Setup")]
-    public bool autoSetupColliders = true;  // 自动禁用 WheelCollider 并生成车身 BoxCollider
-    public float bodyFriction = 0.1f;       // 车身碰撞体摩擦系数
+    public bool autoSetupColliders = true;
+    public float bodyFriction = 0.1f;
 
     [Header("Steering wheel + pedals (G25 family)")]
     [Tooltip("Analog wheel/pedal input, merged with the keyboard (larger magnitude wins). Control paths come from RunFlag 'axesprobe'.")]
@@ -81,7 +81,7 @@ public class CarController : MonoBehaviour
     public float currentAcceleration;
     public float throttleInput;             // -1..1
     public float steerInput;                // -1..1
-    public float currentSteerAngle;         // 实际前轮转角
+    public float currentSteerAngle;
 
     private Rigidbody rb;
     private float previousSpeed;
@@ -103,10 +103,8 @@ public class CarController : MonoBehaviour
         }
     }
 
-    // 会抵抗 AddForce 推进并产生翘头力矩），改用一个包住整车的低摩擦 BoxCollider。
     void SetupColliders()
     {
-        // 1. 禁用所有 WheelCollider
         WheelCollider[] wheels = GetComponentsInChildren<WheelCollider>(true);
         foreach (WheelCollider wc in wheels)
         {
@@ -117,7 +115,6 @@ public class CarController : MonoBehaviour
             Debug.Log("[CarController] Disabled " + wheels.Length + " WheelCollider(s).");
         }
 
-        // 2. 低摩擦物理材质（抓地与减速由脚本的侧向摩擦和发动机制动接管）
         PhysicsMaterial bodyMat = new PhysicsMaterial("CarBodyAuto");
         bodyMat.dynamicFriction = bodyFriction;
         bodyMat.staticFriction = bodyFriction;
@@ -125,8 +122,6 @@ public class CarController : MonoBehaviour
         bodyMat.bounceCombine = PhysicsMaterialCombine.Minimum;
         bodyMat.bounciness = 0f;
 
-        // 粒子系统、车门后视镜壳全被算进去），平底大盒的四角在起伏路面上蹭地形，
-        // 镜面覆盖层，宽度钳制到车身实宽（镜壳并入 Body 网格无法单独剔除）。
         BoxCollider body = GetComponent<BoxCollider>();
         if (body == null)
         {
@@ -145,17 +140,14 @@ public class CarController : MonoBehaviour
             }
             if (!first)
             {
-                // 世界包围盒转回本物体局部空间（车未旋转时进行，Start 阶段成立）
                 body.center = transform.InverseTransformPoint(worldBounds.center);
                 Vector3 lossy = transform.lossyScale;
                 Vector3 size = new Vector3(
                     worldBounds.size.x / Mathf.Max(lossy.x, 0.0001f),
                     worldBounds.size.y / Mathf.Max(lossy.y, 0.0001f),
                     worldBounds.size.z / Mathf.Max(lossy.z, 0.0001f));
-                size.x = Mathf.Min(size.x, 1.90f);   // 车身实宽，剔除外后视镜壳
+                size.x = Mathf.Min(size.x, 1.90f);
 
-                // 标准街机方案：盒底抬高 0.30m 只管墙/车，四个球形"车轮"负责贴地——
-                // 球面能平滑滚过坡度、台阶和地形瓦片接缝。
                 float lift = 0.30f;
                 Vector3 c2 = body.center; c2.y += lift * 0.5f;
                 size.y -= lift;
@@ -169,7 +161,6 @@ public class CarController : MonoBehaviour
                     new(-0.78f, wheelR, 1.45f), new(0.78f, wheelR, 1.45f),
                     new(-0.78f, wheelR, -1.45f), new(0.78f, wheelR, -1.45f)
                 };
-                // 有轮子网格就用真实轮位（更准），找不到再用上面的默认值
                 string[] wheelNames = { "RMCar05WheelFrontLeft", "RMCar05WheelFrontRight",
                                         "RMCar05WheelRearLeft", "RMCar05WheelRearRight" };
                 for (int i = 0; i < 4; i++)
@@ -205,18 +196,12 @@ public class CarController : MonoBehaviour
         if (kb.aKey.isPressed || kb.leftArrowKey.isPressed)  steerInput = -1f;
         if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steerInput = 1f;
 
-        // 回退）。语义与键盘一致：刹车踩到停后继续踩 = 倒车（手动倒挡保留）。
-        // AutoDriver engaged 时照旧覆盖这些输入，BO 轮次不受影响。
-        // 活性门控（同日现场修）：每个轴必须先被观察到真的动过（相对绑定时的
-        // 成 -1，曾在按 W 时把车拽向左；死轴现在永远出局。没插方向盘的机器上
-        // 一切轴永不激活，行为与从前完全一致。
         if (useWheel)
         {
             if (useInputSystemWheel && (_wheel == null || !_wheel.added)) BindWheel();
 
             float wheelSteer = 0f, wheelPedals = 0f;
 
-            // 且其一次性初始化同步能骗过活性门控造成满舵；见字段说明）
             if (useInputSystemWheel && _steerCtl != null)
             {
                 float raw = ReadAxis(_steerCtl);
@@ -458,27 +443,19 @@ public class CarController : MonoBehaviour
 
     void FixedUpdate()
     {
-        // —— 1. 计算当前速度（考虑前进/后退）——
         Vector3 velocity = rb.linearVelocity;
-        float forwardSpeed = Vector3.Dot(velocity, transform.forward);   // 正=前进，负=后退
+        float forwardSpeed = Vector3.Dot(velocity, transform.forward);
         currentSpeed = velocity.magnitude * 3.6f;
 
         currentAcceleration = (velocity.magnitude - previousSpeed) / Time.fixedDeltaTime;
         previousSpeed = velocity.magnitude;
 
-        // 旧逻辑：速度一到 maxSpeed 就完全停止施力（硬顶），且全程恒力，没有真车
-        // 手感。现在：牵引力随速度衰减（低挡扭矩强、接近上限渐弱，自然逼近而非
-        // 一刀切），超过 maxSpeed 仍保留一小段递减推力（可短暂超速），风阻/发动机
-        // 制动最终把车稳定在略高于 maxSpeed 的平衡速度。
         if (throttleInput > 0f)
         {
-            // 归一化速度：0 = 静止，1 = maxSpeed。低速给满扭矩，越接近上限推力越小。
             float sN = Mathf.Clamp01(forwardSpeed / Mathf.Max(1f, maxSpeed));
-            // 牵引力系数：1.0 → 0.15（到 maxSpeed），二次衰减模拟高挡乏力
             float pull = Mathf.Lerp(1f, 0.15f, sN * sN);
             if (forwardSpeed > maxSpeed)
             {
-                // 允许超速：上限之上推力继续快速衰减，60 km/h 附近归零
                 float over = (forwardSpeed - maxSpeed) / Mathf.Max(1f, maxSpeed);
                 pull = Mathf.Max(0f, 0.15f - over * 0.5f);
             }
@@ -488,32 +465,26 @@ public class CarController : MonoBehaviour
         {
             if (forwardSpeed > 0.5f)
             {
-                // 还在前进中，S 先起刹车作用
                 rb.AddForce(-transform.forward * brakeForce, ForceMode.Force);
             }
             else if (forwardSpeed > -maxReverseSpeed)
             {
-                // 停住或已经在倒车，继续倒车
                 rb.AddForce(transform.forward * motorForce * throttleInput * 0.6f, ForceMode.Force);
             }
         }
 
-        // 发动机制动（没踩油门时自然减速）
         rb.linearDamping = (throttleInput == 0f) ? groundedDrag : drag;
 
-        // —— 3. 手刹 ——
         var kb = Keyboard.current;
         if (kb != null && kb.spaceKey.isPressed)
         {
             rb.linearVelocity *= 0.92f;
         }
 
-        // —— 4. 方向盘平滑响应 ——
         float targetSteerAngle = steerInput * maxSteerAngle;
         currentSteerAngle = Mathf.Lerp(currentSteerAngle, targetSteerAngle,
                                        steeringResponse * Time.fixedDeltaTime);
 
-        // —— 5. 基于行驶方向的真实转向 ——
         if (Mathf.Abs(forwardSpeed) > 0.3f)
         {
             float turnRateRadPerSec = (forwardSpeed / turnRadiusFactor)
@@ -525,13 +496,10 @@ public class CarController : MonoBehaviour
             rb.MoveRotation(rb.rotation * turnRotation);
         }
 
-        // —— 6. 侧向摩擦（防止车打滑）——
-        // 否则每帧消除量超过侧向速度本身会反向过冲并指数放大（旧版崩溃根因）。
         Vector3 rightVelocity = transform.right * Vector3.Dot(velocity, transform.right);
         float grip = Mathf.Clamp01(sidewaysFriction * Time.fixedDeltaTime);
         rb.AddForce(-rightVelocity * grip, ForceMode.VelocityChange);
 
-        // —— 7. 速度安全钳制（防物理爆炸传播）——
         if (rb.linearVelocity.magnitude > absoluteMaxSpeed)
         {
             rb.linearVelocity = rb.linearVelocity.normalized * absoluteMaxSpeed;

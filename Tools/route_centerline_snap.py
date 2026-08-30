@@ -1,8 +1,8 @@
 """Snap a recorded driving loop onto the road-network centrelines."""
 import math, struct, re, statistics, sys
 
-DB        = r"F:/AAAUCL毕设/SustainableDriving/Assets/Database/Pimlico (0, 0).asset"
-AUTODRIVER_V1 = r"F:/AAAUCL毕设/Scripts/EcoHUD/AutoDriver.cs"
+DB        = r"path/to/Assets/Database/Pimlico (0, 0).asset"
+AUTODRIVER_V1 = r"path/to/Assets/Scripts/EcoHUD/AutoDriver.cs"
 
 RMAX      = 9.0     # max snap distance (m)
 ANG_GATE  = 70.0

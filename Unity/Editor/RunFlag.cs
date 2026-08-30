@@ -1862,7 +1862,7 @@ public static class RunFlag
         Hide(GameObject.Find("TargetMarkers Canvas"), "marker canvas");
 
         WriteResult(n == 0 ? "cleanscene: nothing found to hide?!" : sb.ToString()
-                    + "(view-only: Hierarchy 眼睛图标可随时恢�? 'drawroutes' 的路线标记不受影�?");
+                    + "(view-only: the Hierarchy eye icon restores visibility; 'drawroutes' markers are unaffected)");
     }
 
     static void DrawRoutes(string arg)

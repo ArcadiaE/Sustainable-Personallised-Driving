@@ -50,7 +50,7 @@ Eco-driving displays are usually evaluated as a few fixed designs shown identica
 
 ## Study at a glance
 
-16 participants, 336 driving rounds, 4 fixed urban routes (160–280 m). Cumulative hypervolume rose for 15/16 participants; the recommended configurations improved all four subjective objectives against a same-route sampling baseline, left the simulated energy proxy unchanged, and differed markedly between participants.
+16 participants, 336 driving rounds, 4 fixed urban routes (165–283 m). Cumulative hypervolume rose for 15/16 participants; the recommended configurations improved all four subjective objectives against a same-route sampling baseline, left the simulated energy proxy unchanged, and differed markedly between participants.
 
 <p align="center">
   <img src="docs/pareto_panels.png" width="80%" alt="Per-participant Pareto panels: energy proxy vs task load, sampling and optimisation rounds">
@@ -84,7 +84,7 @@ The Unity project depends on assets and services that cannot be redistributed he
 
 ## Reproducing the analysis
 
-R 4.6.1. `Analysis/analysis.R` reads the data layout described in `Data/README.md` and regenerates the statistics, figures, and tables reported in the thesis (outputs included under `Analysis/output/`). Package versions are listed in the thesis appendix.
+R 4.6.1. `Analysis/analysis.R` documents the full pipeline from the raw per-participant folders to every reported number; a complete re-run additionally needs the withheld trajectory files, while the statistical models consume `Data/master_rounds.csv`, which is released. All generated statistics, figures, and tables are included under `Analysis/output/`. Package versions are listed in the thesis appendix.
 
 ## License
 
@@ -110,7 +110,7 @@ Code is released under the [MIT License](LICENSE) (c) 2026 Yike Zhang. Files und
 
 ## 研究概况
 
-16 名参与者、336 个驾驶轮次、4 条固定城市路线（160–280 米）。15/16 名参与者的累积超体积上升；推荐配置相对同路线采样基线改善了全部四项主观目标，模拟能耗代理值无显著变化，且参与者之间的最终配置差异显著。
+16 名参与者、336 个驾驶轮次、4 条固定城市路线（165–283 米）。15/16 名参与者的累积超体积上升；推荐配置相对同路线采样基线改善了全部四项主观目标，模拟能耗代理值无显著变化，且参与者之间的最终配置差异显著。
 
 ## 仓库结构
 
@@ -138,7 +138,7 @@ Unity 工程依赖无法在此再分发的资产与服务：Cesium for Unity（1
 
 ## 复现分析
 
-R 4.6.1。`Analysis/analysis.R` 读取 `Data/README.md` 描述的数据布局，重新生成论文所报告的统计量、图和表（输出已附于 `Analysis/output/`）。软件包版本见论文附录。
+R 4.6.1。`Analysis/analysis.R` 记录了从原始逐参与者数据到每个报告数字的完整管线；完整重跑还需未发布的轨迹文件，而统计模型消费的 `Data/master_rounds.csv` 已发布。全部统计量、图和表的输出已附于 `Analysis/output/`。软件包版本见论文附录。
 
 ## 许可证
 
